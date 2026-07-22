@@ -41,11 +41,16 @@
   .card .dots{margin-left:auto; background:none; border:none; color:var(--faint);
     font-size:18px; padding:6px 10px; margin-right:-10px; margin-top:-6px; cursor:pointer; line-height:1;}
   .card .framing{font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4;}
-  .card .num{font-family:ui-rounded, -apple-system, system-ui, sans-serif;
+  .card .num{display:inline-block; font-family:ui-rounded, -apple-system, system-ui, sans-serif;
     font-size:88px; font-weight:800; line-height:1; margin-top:16px;
     font-variant-numeric:tabular-nums; letter-spacing:-0.02em;
-    transition:transform .15s cubic-bezier(.34,1.56,.64,1);}
-  .card.ticked .num{transform:scale(1.05);}
+    transform-origin:left center;}
+  .card.ticked .num{animation:pop .28s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes pop{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.06);}
+    100%{transform:scale(1);}
+  }
   .card .toward{font-size:13px; color:var(--faint); margin-top:6px; font-variant-numeric:tabular-nums;}
   .card .msg{font-size:14px; color:var(--muted); margin-top:14px; min-height:20px; line-height:1.4;
     opacity:0; transition:opacity .35s ease; display:flex; align-items:center; gap:12px;}
@@ -61,7 +66,7 @@
   #confetti{position:fixed; inset:0; width:100%; height:100%;
     pointer-events:none; z-index:9999;}
   @media (prefers-reduced-motion: reduce){
-    .card .num{transition:none;}
+    .card.ticked .num{animation:none;}
     #confetti{display:none;}
   }
 
