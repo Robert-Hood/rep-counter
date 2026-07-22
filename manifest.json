@@ -1,0 +1,11 @@
+{
+  "name": "do 100 things",
+  "short_name": "100 things",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16130f",
+  "theme_color": "#16130f",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

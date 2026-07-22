@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>do 100 things</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="100 things">
+<meta name="theme-color" content="#16130f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  :root{
+    --bg:#16130f; --card:#211d17; --card-press:#282318;
+    --ink:#f0eade; --muted:#8f8778; --faint:#57503f;
+    --hairline:rgba(240,234,222,.08);
+    --amber:#e8b04b; --sage:#a8c090; --sky:#8fb6cf; --rose:#d99a94; --lilac:#b3a3cf; --sand:#d8c8a8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; touch-action:manipulation; overscroll-behavior-y:none;}
+  body{min-height:100vh; padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 32px);}
+  header{display:flex; align-items:baseline; justify-content:space-between; padding:4px 6px 18px;}
+  header h1{font-size:15px; font-weight:600; letter-spacing:.06em; color:var(--muted); margin:0;}
+  header button{background:none; border:none; color:var(--faint); font-size:20px; padding:4px 8px; cursor:pointer;}
+
+  .card{background:var(--card); border-radius:20px; padding:20px 20px 22px; margin-bottom:14px;
+    cursor:pointer; user-select:none; -webkit-user-select:none; position:relative;
+    transition:background .12s ease, transform .12s ease;}
+  .card:active{background:var(--card-press); transform:scale(.985);}
+  .card .top{display:flex; align-items:center; gap:8px;}
+  .card .name{font-size:16px; font-weight:600;}
+  .card .emoji{font-size:16px;}
+  .card .dots{margin-left:auto; background:none; border:none; color:var(--faint);
+    font-size:18px; padding:6px 10px; margin-right:-10px; margin-top:-6px; cursor:pointer; line-height:1;}
+  .card .framing{font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4;}
+  .card .num{font-family:ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size:88px; font-weight:800; line-height:1; margin-top:16px;
+    font-variant-numeric:tabular-nums; letter-spacing:-0.02em;
+    transition:transform .15s cubic-bezier(.34,1.56,.64,1);}
+  .card.ticked .num{transform:scale(1.05);}
+  .card .toward{font-size:13px; color:var(--faint); margin-top:6px; font-variant-numeric:tabular-nums;}
+  .card .msg{font-size:14px; color:var(--muted); margin-top:14px; min-height:20px; line-height:1.4;
+    opacity:0; transition:opacity .35s ease; display:flex; align-items:center; gap:12px;}
+  .card .msg.show{opacity:1;}
+  .card .msg.milestone .msgtext{color:var(--ink);}
+  .card .msgtext{flex:1;}
+  .card .undo{background:none; border:1px solid var(--hairline); border-radius:8px;
+    color:var(--faint); font-size:12px; padding:5px 11px; cursor:pointer; flex:none;
+    font-family:inherit; letter-spacing:.02em; display:none;}
+  .card .undo.show{display:block;}
+  .card .undo:active{color:var(--muted);}
+
+  #confetti{position:fixed; inset:0; width:100%; height:100%;
+    pointer-events:none; z-index:9999;}
+  @media (prefers-reduced-motion: reduce){
+    .card .num{transition:none;}
+    #confetti{display:none;}
+  }
+
+  .empty{color:var(--faint); text-align:center; padding:60px 20px; font-size:15px; line-height:1.6;}
+
+  dialog{background:var(--card); color:var(--ink); border:none; border-radius:20px;
+    padding:22px; width:min(92vw, 380px); margin:auto;}
+  dialog::backdrop{background:rgba(0,0,0,.55);}
+  dialog h2{font-size:16px; margin:0 0 16px; font-weight:600;}
+  dialog label{display:block; font-size:13px; color:var(--muted); margin:14px 0 6px;}
+  dialog input[type=text], dialog input[type=number]{
+    width:100%; background:var(--bg); border:1px solid var(--hairline); border-radius:10px;
+    color:var(--ink); font-size:16px; padding:10px 12px; outline:none;}
+  .row{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{background:var(--bg); border:1px solid var(--hairline); border-radius:10px;
+    padding:8px 10px; font-size:18px; cursor:pointer;}
+  .chip.sel{border-color:var(--muted);}
+  .swatch{width:34px; height:34px; border-radius:10px; border:2px solid transparent; cursor:pointer;}
+  .swatch.sel{border-color:var(--ink);}
+  .actions{display:flex; gap:10px; margin-top:22px;}
+  .btn{flex:1; border:none; border-radius:12px; padding:12px; font-size:15px; font-weight:600; cursor:pointer;}
+  .btn.primary{background:var(--ink); color:var(--bg);}
+  .btn.ghost{background:none; color:var(--muted);}
+  .sheet-list{display:flex; flex-direction:column;}
+  .sheet-list button{background:none; border:none; border-bottom:1px solid var(--hairline);
+    color:var(--ink); font-size:15px; text-align:left; padding:14px 4px; cursor:pointer;}
+  .sheet-list button:last-child{border-bottom:none;}
+  .sheet-list button.quiet{color:var(--muted);}
+  .archived-item{display:flex; align-items:center; justify-content:space-between;
+    padding:12px 4px; border-bottom:1px solid var(--hairline); font-size:15px;}
+  .archived-item span{color:var(--muted);}
+  .archived-item button{background:none; border:none; color:var(--ink); font-size:14px; cursor:pointer;}
+</style>
+</head>
+<body>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<header>
+  <h1>do 100 things 💪</h1>
+  <button id="settingsBtn" aria-label="settings">⋯</button>
+</header>
+<main id="list"></main>
+
+<dialog id="addDlg">
+  <h2>new counter</h2>
+  <label>name</label>
+  <input type="text" id="addName" placeholder="e.g. reply 100" autocomplete="off">
+  <label>why this one exists (shown under the name)</label>
+  <input type="text" id="addFraming" placeholder="optional" autocomplete="off">
+  <label>target (optional)</label>
+  <input type="number" id="addTarget" placeholder="e.g. 100" inputmode="numeric">
+  <label>emoji</label>
+  <div class="row" id="addEmoji"></div>
+  <label>colour</label>
+  <div class="row" id="addColor"></div>
+  <div class="actions">
+    <button class="btn ghost" onclick="addDlg.close()">cancel</button>
+    <button class="btn primary" id="addSave">add</button>
+  </div>
+</dialog>
+
+<dialog id="cardDlg">
+  <h2 id="cardDlgTitle"></h2>
+  <div class="sheet-list">
+    <button id="noteBtn">add a note to the last rep</button>
+    <button id="editBtn">edit</button>
+    <button id="upBtn">move up</button>
+    <button id="downBtn">move down</button>
+    <button id="archiveBtn" class="quiet">archive</button>
+    <button class="quiet" onclick="cardDlg.close()">close</button>
+  </div>
+</dialog>
+
+<dialog id="editDlg">
+  <h2>edit counter</h2>
+  <label>name</label>
+  <input type="text" id="editName" autocomplete="off">
+  <label>framing line</label>
+  <input type="text" id="editFraming" autocomplete="off">
+  <label>target (blank for none)</label>
+  <input type="number" id="editTarget" inputmode="numeric">
+  <label>count <span style="color:var(--faint)">· for fixing a mis-tap, or starting from where you already are</span></label>
+  <input type="number" id="editCount" inputmode="numeric">
+  <label>emoji</label>
+  <div class="row" id="editEmoji"></div>
+  <label>colour</label>
+  <div class="row" id="editColor"></div>
+  <div class="actions">
+    <button class="btn ghost" onclick="editDlg.close()">cancel</button>
+    <button class="btn primary" id="editSave">save</button>
+  </div>
+</dialog>
+
+<dialog id="noteDlg">
+  <h2>note on the last rep</h2>
+  <input type="text" id="noteText" placeholder="what was it?" autocomplete="off">
+  <div class="actions">
+    <button class="btn ghost" onclick="noteDlg.close()">cancel</button>
+    <button class="btn primary" id="noteSave">save</button>
+  </div>
+</dialog>
+
+<dialog id="settingsDlg">
+  <h2>settings</h2>
+  <div class="sheet-list">
+    <button id="newCounterBtn">new counter</button>
+    <button id="exportBtn" class="quiet">export data</button>
+    <button class="quiet" onclick="settingsDlg.close()">close</button>
+  </div>
+  <div id="archivedWrap" style="margin-top:18px; display:none;">
+    <label style="font-size:13px; color:var(--muted);">archived (reps still counted, still yours)</label>
+    <div id="archivedList"></div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const KEY = "countup.v1";
+const GAP_MS = 7 * 24 * 60 * 60 * 1000; // internal only, never displayed
+const EMOJIS = ["💬","🍽️","✍️","🏊","⚽","📖","🧘","🎯","🔁","🌱"];
+const COLORS = ["--amber","--sage","--sky","--rose","--lilac","--sand"];
+
+const MSG_INCREMENT = [
+  "showed up. that's the whole thing.",
+  "+1. it counts, even this one.",
+  "doesn't have to be good. has to exist.",
+  "rep logged.",
+  "you'll only see this accumulate later. it is accumulating.",
+  "quantity now, quality is a side effect.",
+  "the number went up. nothing else was required.",
+  "no one's grading it.",
+  "that's one more than yesterday's version of you had.",
+  "good. go do something else."
+];
+const MSG_RETURN = [
+  "picked it back up. that's the rep that matters most.",
+  "no gap here. the count never went down.",
+  "welcome back. it waited."
+];
+const MSG_MILESTONE = {
+  10:  "ten. the hard part was one.",
+  25:  "twenty five. this is a real practice now.",
+  50:  "halfway. you didn't do it consistently and it still worked.",
+  100: "one hundred. you found out what this actually is by doing it, not by thinking about it."
+};
+
+function seed(){
+  return { counters: [
+    { id: crypto.randomUUID(), name:"reply 100", framing:"the goal is pressing send, not being right",
+      emoji:"💬", color:"--sky", target:100, count:0, entries:[], archived:false },
+    { id: crypto.randomUUID(), name:"food tracking", framing:"logging it is the win. the number in it isn't the point today",
+      emoji:"🍽️", color:"--sage", target:null, count:0, entries:[], archived:false }
+  ]};
+}
+
+let state = load();
+function load(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  const s = seed(); localStorage.setItem(KEY, JSON.stringify(s)); return s;
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); queueSync(); }
+
+/* ---------- sync: local first, durable copy in the background, silent always ---------- */
+let syncTimer = null;
+let syncReady = false;   // held until the first pull settles, so a fresh
+let syncPending = false; // install can't overwrite a bigger remote count
+function queueSync(){
+  if(!syncReady){ syncPending = true; return; }
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushSync, 800);
+}
+async function pushSync(){
+  try{
+    await fetch("/api/counters", { method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(state) });
+  }catch(e){ /* offline or no backend yet: retry on next change, say nothing */ }
+}
+async function pullSync(){
+  try{
+    const r = await fetch("/api/counters");
+    if(r.ok){
+      const remote = await r.json();
+      if(remote && Array.isArray(remote.counters)){
+        const localReps  = state.counters.reduce((a,c)=>a+c.count,0);
+        const remoteReps = remote.counters.reduce((a,c)=>a+c.count,0);
+        if(remoteReps > localReps){
+          state = remote;
+          localStorage.setItem(KEY, JSON.stringify(state));
+          syncPending = false;
+          render();
+        }
+      }
+    }
+  }catch(e){ /* silent */ }
+  finally{
+    syncReady = true;
+    if(syncPending){ syncPending = false; queueSync(); }
+  }
+}
+
+/* ---------- confetti ---------- */
+const cvs = document.getElementById("confetti");
+const ctx = cvs.getContext("2d");
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let particles = [], rafId = null;
+
+function sizeCanvas(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cvs.width = window.innerWidth * dpr;
+  cvs.height = window.innerHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+sizeCanvas();
+window.addEventListener("resize", sizeCanvas);
+
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#f0eade";
+}
+
+function burst(x, y, opts){
+  if(REDUCED) return;
+  const n = opts.count;
+  const palette = opts.colors;
+  for(let i = 0; i < n; i++){
+    const angle = (-Math.PI/2) + (Math.random() - 0.5) * opts.spread;
+    const speed = opts.power * (0.55 + Math.random() * 0.75);
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 1.2,
+      vy: Math.sin(angle) * speed,
+      w: 5 + Math.random() * 5,
+      h: 3 + Math.random() * 4,
+      rot: Math.random() * Math.PI,
+      vrot: (Math.random() - 0.5) * 0.3,
+      color: palette[Math.floor(Math.random() * palette.length)],
+      life: 1,
+      decay: 0.008 + Math.random() * 0.008
+    });
+  }
+  if(!rafId) rafId = requestAnimationFrame(tick);
+}
+
+function tick(){
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  for(let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.vy += 0.32;          // gravity
+    p.vx *= 0.99;          // drag
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.vrot;
+    p.life -= p.decay;
+    if(p.life <= 0 || p.y > window.innerHeight + 40){ particles.splice(i, 1); continue; }
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.globalAlpha = Math.min(1, p.life * 1.6);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    ctx.restore();
+  }
+  if(particles.length){ rafId = requestAnimationFrame(tick); }
+  else { rafId = null; ctx.clearRect(0, 0, cvs.width, cvs.height); }
+}
+
+function celebrate(x, y, counter, isMilestone){
+  const own = cssVar(counter.color || "--ink");
+  const colors = isMilestone
+    ? [own, cssVar("--amber"), cssVar("--sand"), cssVar("--ink"), cssVar("--sage")]
+    : [own, cssVar("--sand"), cssVar("--ink")];
+  burst(x, y, isMilestone
+    ? { count: 70, spread: Math.PI * 1.5, power: 13, colors }
+    : { count: 14, spread: Math.PI * 0.85, power: 7,  colors });
+}
+
+/* ---------- messages ---------- */
+let lastMsgIdx = -1;
+function pickMessage(counter, prevLastTs){
+  if(MSG_MILESTONE[counter.count]) return { text: MSG_MILESTONE[counter.count], milestone:true };
+  if(counter.target && counter.count === counter.target && !MSG_MILESTONE[counter.count])
+    return { text: "that's the number you named. keep counting if you feel like it, or let it rest here. both are fine.", milestone:true };
+  if(prevLastTs && (Date.now() - prevLastTs) > GAP_MS){
+    return { text: MSG_RETURN[Math.floor(Math.random()*MSG_RETURN.length)], milestone:false };
+  }
+  let i;
+  do { i = Math.floor(Math.random()*MSG_INCREMENT.length); } while(i === lastMsgIdx && MSG_INCREMENT.length > 1);
+  lastMsgIdx = i;
+  return { text: MSG_INCREMENT[i], milestone:false };
+}
+
+/* ---------- render ---------- */
+const list = document.getElementById("list");
+function render(){
+  const active = state.counters.filter(c=>!c.archived);
+  if(active.length === 0){
+    list.innerHTML = '<div class="empty">nothing here yet.<br>add a counter and tap it once.</div>';
+  } else {
+    list.innerHTML = active.map(c => `
+      <div class="card" data-id="${c.id}">
+        <div class="top">
+          <span class="emoji">${c.emoji||""}</span>
+          <span class="name">${esc(c.name)}</span>
+          <button class="dots" data-dots="${c.id}" aria-label="options">···</button>
+        </div>
+        ${c.framing ? `<div class="framing">${esc(c.framing)}</div>` : ""}
+        <div class="num" style="color:var(${c.color||"--ink"})">${c.count}</div>
+        ${c.target ? `<div class="toward">toward ${c.target}</div>` : ""}
+        <div class="msg" data-msg="${c.id}">
+          <span class="msgtext"></span>
+          <button class="undo" data-undo="${c.id}">undo</button>
+        </div>
+      </div>`).join("");
+  }
+  renderArchived();
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+/* ---------- increment ---------- */
+const msgTimers = {};
+list.addEventListener("click", e => {
+  const undo = e.target.closest("[data-undo]");
+  if(undo){ e.stopPropagation(); undoLast(undo.dataset.undo, undo.closest(".card")); return; }
+  const dots = e.target.closest("[data-dots]");
+  if(dots){ openCardSheet(dots.dataset.dots); return; }
+  const card = e.target.closest(".card");
+  if(!card) return;
+  increment(card.dataset.id, card, e);
+});
+
+function showMsg(cardEl, id, text, milestone, showUndo, ms){
+  const msgEl = cardEl.querySelector("[data-msg]");
+  msgEl.querySelector(".msgtext").textContent = text;
+  msgEl.classList.toggle("milestone", !!milestone);
+  msgEl.classList.add("show");
+  msgEl.querySelector(".undo").classList.toggle("show", !!showUndo);
+  clearTimeout(msgTimers[id]);
+  msgTimers[id] = setTimeout(()=>{
+    msgEl.classList.remove("show");
+    msgEl.querySelector(".undo").classList.remove("show");
+  }, ms);
+}
+
+function increment(id, cardEl, ev){
+  const c = state.counters.find(x=>x.id===id);
+  if(!c) return;
+  const prevLastTs = c.entries.length ? c.entries[c.entries.length-1].t : null;
+  c.count++;
+  c.entries.push({ t: Date.now() });
+  save();
+  // in-place update: no full re-render mid-tap
+  const numEl = cardEl.querySelector(".num");
+  numEl.textContent = c.count;
+  cardEl.classList.remove("ticked"); void cardEl.offsetWidth; cardEl.classList.add("ticked");
+
+  const m = pickMessage(c, prevLastTs);
+  showMsg(cardEl, id, m.text, m.milestone, true, m.milestone ? 7000 : 6000);
+
+  // confetti from the thumb
+  const x = ev && ev.clientX ? ev.clientX : window.innerWidth / 2;
+  const y = ev && ev.clientY ? ev.clientY : window.innerHeight / 2;
+  celebrate(x, y, c, m.milestone);
+}
+
+function undoLast(id, cardEl){
+  const c = state.counters.find(x=>x.id===id);
+  if(!c || c.count <= 0) return;
+  c.count--;
+  c.entries.pop();
+  save();
+  cardEl.querySelector(".num").textContent = c.count;
+  showMsg(cardEl, id, "fixed.", false, c.count > 0, 5000);
+}
+
+/* ---------- card sheet ---------- */
+const cardDlg = document.getElementById("cardDlg");
+let sheetId = null;
+function openCardSheet(id){
+  sheetId = id;
+  const c = state.counters.find(x=>x.id===id);
+  document.getElementById("cardDlgTitle").textContent = c.name;
+  document.getElementById("noteBtn").style.display = c.entries.length ? "" : "none";
+  cardDlg.showModal();
+}
+document.getElementById("archiveBtn").onclick = () => {
+  const c = state.counters.find(x=>x.id===sheetId);
+  c.archived = true; save(); cardDlg.close(); render();
+};
+document.getElementById("upBtn").onclick = () => moveCounter(-1);
+document.getElementById("downBtn").onclick = () => moveCounter(1);
+function moveCounter(dir){
+  const idx = state.counters.findIndex(x=>x.id===sheetId);
+  const j = idx + dir;
+  if(j < 0 || j >= state.counters.length) return;
+  [state.counters[idx], state.counters[j]] = [state.counters[j], state.counters[idx]];
+  save(); render();
+}
+
+/* ---------- note on last rep ---------- */
+const noteDlg = document.getElementById("noteDlg");
+document.getElementById("noteBtn").onclick = () => { cardDlg.close(); document.getElementById("noteText").value=""; noteDlg.showModal(); };
+document.getElementById("noteSave").onclick = () => {
+  const c = state.counters.find(x=>x.id===sheetId);
+  const txt = document.getElementById("noteText").value.trim();
+  if(txt && c.entries.length) c.entries[c.entries.length-1].note = txt;
+  save(); noteDlg.close();
+};
+
+/* ---------- add / edit ---------- */
+const addDlg = document.getElementById("addDlg");
+const editDlg = document.getElementById("editDlg");
+let pick = { addEmoji:EMOJIS[0], addColor:COLORS[0], editEmoji:EMOJIS[0], editColor:COLORS[0] };
+function buildPickers(prefix){
+  const em = document.getElementById(prefix+"Emoji");
+  em.innerHTML = EMOJIS.map(e=>`<button type="button" class="chip ${pick[prefix+"Emoji"]===e?"sel":""}" data-e="${e}">${e}</button>`).join("");
+  em.querySelectorAll("button").forEach(b=> b.onclick = ()=>{ pick[prefix+"Emoji"]=b.dataset.e; buildPickers(prefix); });
+  const co = document.getElementById(prefix+"Color");
+  co.innerHTML = COLORS.map(c=>`<button type="button" class="swatch ${pick[prefix+"Color"]===c?"sel":""}" style="background:var(${c})" data-c="${c}"></button>`).join("");
+  co.querySelectorAll("button").forEach(b=> b.onclick = ()=>{ pick[prefix+"Color"]=b.dataset.c; buildPickers(prefix); });
+}
+document.getElementById("newCounterBtn").onclick = () => {
+  settingsDlg.close();
+  document.getElementById("addName").value = "";
+  document.getElementById("addFraming").value = "";
+  document.getElementById("addTarget").value = "";
+  pick.addEmoji = EMOJIS[0]; pick.addColor = COLORS[Math.floor(Math.random()*COLORS.length)];
+  buildPickers("add"); addDlg.showModal();
+};
+document.getElementById("addSave").onclick = () => {
+  const name = document.getElementById("addName").value.trim();
+  if(!name) return;
+  const t = parseInt(document.getElementById("addTarget").value, 10);
+  state.counters.push({ id: crypto.randomUUID(), name,
+    framing: document.getElementById("addFraming").value.trim(),
+    emoji: pick.addEmoji, color: pick.addColor,
+    target: isNaN(t) ? null : t, count: 0, entries: [], archived: false });
+  save(); addDlg.close(); render();
+};
+document.getElementById("editBtn").onclick = () => {
+  const c = state.counters.find(x=>x.id===sheetId);
+  cardDlg.close();
+  document.getElementById("editName").value = c.name;
+  document.getElementById("editFraming").value = c.framing || "";
+  document.getElementById("editTarget").value = c.target ?? "";
+  document.getElementById("editCount").value = c.count;
+  pick.editEmoji = c.emoji || EMOJIS[0]; pick.editColor = c.color || COLORS[0];
+  buildPickers("edit"); editDlg.showModal();
+};
+document.getElementById("editSave").onclick = () => {
+  const c = state.counters.find(x=>x.id===sheetId);
+  const name = document.getElementById("editName").value.trim();
+  if(name) c.name = name;
+  c.framing = document.getElementById("editFraming").value.trim();
+  const t = parseInt(document.getElementById("editTarget").value, 10);
+  c.target = isNaN(t) ? null : t;
+  const n = parseInt(document.getElementById("editCount").value, 10);
+  if(!isNaN(n) && n >= 0){
+    c.count = n;
+    if(c.entries.length > n) c.entries = c.entries.slice(0, n); // keep the log coherent
+  }
+  c.emoji = pick.editEmoji; c.color = pick.editColor;
+  save(); editDlg.close(); render();
+};
+
+/* ---------- settings ---------- */
+const settingsDlg = document.getElementById("settingsDlg");
+document.getElementById("settingsBtn").onclick = () => { renderArchived(); settingsDlg.showModal(); };
+function renderArchived(){
+  const arch = state.counters.filter(c=>c.archived);
+  const wrap = document.getElementById("archivedWrap");
+  wrap.style.display = arch.length ? "" : "none";
+  document.getElementById("archivedList").innerHTML = arch.map(c=>`
+    <div class="archived-item"><span>${c.emoji||""} ${esc(c.name)} · ${c.count}</span>
+    <button data-un="${c.id}">bring back</button></div>`).join("");
+  wrap.querySelectorAll("[data-un]").forEach(b=> b.onclick = ()=>{
+    state.counters.find(x=>x.id===b.dataset.un).archived = false;
+    save(); render();
+  });
+}
+document.getElementById("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "count-export.json";
+  a.click(); URL.revokeObjectURL(a.href);
+};
+
+render();
+pullSync();
+</script>
+</body>
+</html>
