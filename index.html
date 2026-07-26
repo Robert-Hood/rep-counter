@@ -94,11 +94,11 @@
   @media (hover:hover) and (pointer:fine){
     .navarrow{display:flex; align-items:center; justify-content:center;
       position:fixed; top:0; bottom:0; width:64px; z-index:50;
-      background:none; border:none; color:var(--faint); font-size:34px;
-      cursor:pointer; opacity:0; transition:opacity .18s ease, color .18s ease;
+      background:none; border:none; color:var(--muted); font-size:34px;
+      cursor:pointer; opacity:.7; transition:opacity .18s ease, color .18s ease;
       -webkit-tap-highlight-color:transparent;}
-    body:hover .navarrow{opacity:.5;}
-    .navarrow:hover{opacity:1; color:var(--muted);}
+    body:hover .navarrow{opacity:.85;}
+    .navarrow:hover{opacity:1; color:var(--ink);}
     .navarrow.left{left:max(0px, calc(50% - 310px - 64px));}
     .navarrow.right{right:max(0px, calc(50% - 310px - 64px));}
     .navarrow[disabled]{opacity:0 !important; pointer-events:none;}
