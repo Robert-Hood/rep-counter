@@ -21,28 +21,41 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
     font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    -webkit-font-smoothing:antialiased; touch-action:manipulation; overscroll-behavior-y:none;}
-  body{min-height:100vh; padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 32px);
-    max-width:540px; margin:0 auto;}
-  @media (hover:hover) and (pointer:fine){
-    .card:hover{background:var(--card-press);}
-  }
-  header{display:flex; align-items:baseline; justify-content:space-between; padding:4px 6px 18px;}
+    -webkit-font-smoothing:antialiased; touch-action:manipulation; overscroll-behavior:none;}
+  body{height:100vh; height:100dvh; display:flex; flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 20px) 0 calc(env(safe-area-inset-bottom) + 20px);
+    max-width:620px; margin:0 auto; overflow:hidden;}
+  header{display:flex; align-items:baseline; justify-content:space-between; padding:4px 22px 16px; flex:none;}
   header h1{font-size:15px; font-weight:600; letter-spacing:.06em; color:var(--muted); margin:0;}
   header button{background:none; border:none; color:var(--faint); font-size:20px; padding:4px 8px; cursor:pointer;}
 
-  .card{background:var(--card); border-radius:20px; padding:20px 20px 22px; margin-bottom:14px;
+  /* the scroller row: one card per screen, snap to each */
+  main#list{flex:1 1 auto; display:flex; align-items:center;
+    overflow-x:auto; overflow-y:hidden;
+    scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; scroll-behavior:smooth;}
+  main#list::-webkit-scrollbar{display:none;}
+
+  .slide{flex:0 0 100%; scroll-snap-align:start; scroll-snap-stop:always;
+    display:flex; justify-content:center; padding:0 16px; box-sizing:border-box;}
+
+  .card{flex:1 1 auto; max-width:460px; background:var(--card); border-radius:20px; padding:22px 22px 24px;
     cursor:pointer; user-select:none; -webkit-user-select:none; position:relative;
+    display:flex; flex-direction:column;
     transition:background .12s ease, transform .12s ease;}
-  .card:active{background:var(--card-press); transform:scale(.985);}
+  .card:active{background:var(--card-press); transform:scale(.99);}
+  @media (hover:hover) and (pointer:fine){
+    .card:hover{background:var(--card-press);}
+  }
   .card .top{display:flex; align-items:center; gap:8px;}
   .card .name{font-size:16px; font-weight:600;}
   .card .emoji{font-size:16px;}
   .card .dots{margin-left:auto; background:none; border:none; color:var(--faint);
     font-size:18px; padding:6px 10px; margin-right:-10px; margin-top:-6px; cursor:pointer; line-height:1;}
   .card .framing{font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4;}
+  .card .mid{margin-top:20px;}
   .card .num{display:inline-block; font-family:ui-rounded, -apple-system, system-ui, sans-serif;
-    font-size:88px; font-weight:800; line-height:1; margin-top:16px;
+    font-size:92px; font-weight:800; line-height:1;
     font-variant-numeric:tabular-nums; letter-spacing:-0.02em;
     transform-origin:left center;}
   .card.ticked .num{animation:pop .28s cubic-bezier(.34,1.56,.64,1);}
@@ -51,8 +64,8 @@
     40%{transform:scale(1.06);}
     100%{transform:scale(1);}
   }
-  .card .toward{font-size:13px; color:var(--faint); margin-top:6px; font-variant-numeric:tabular-nums;}
-  .card .msg{font-size:14px; color:var(--muted); margin-top:14px; min-height:20px; line-height:1.4;
+  .card .toward{font-size:13px; color:var(--faint); margin-top:8px; font-variant-numeric:tabular-nums;}
+  .card .msg{font-size:14px; color:var(--muted); margin-top:20px; min-height:20px; line-height:1.4;
     opacity:0; transition:opacity .35s ease; display:flex; align-items:center; gap:12px;}
   .card .msg.show{opacity:1;}
   .card .msg.milestone .msgtext{color:var(--ink);}
@@ -70,7 +83,26 @@
     #confetti{display:none;}
   }
 
-  .empty{color:var(--faint); text-align:center; padding:60px 20px; font-size:15px; line-height:1.6;}
+  .empty{color:var(--faint); text-align:center; margin:auto; padding:20px; font-size:15px; line-height:1.6;}
+
+  #total{flex:none; text-align:center; font-size:13px; color:var(--faint);
+    padding:14px 22px 2px; font-variant-numeric:tabular-nums; min-height:18px;
+    transition:opacity .3s ease;}
+
+  /* desktop nav arrows: hidden on touch, shown for mouse/trackpad */
+  .navarrow{display:none;}
+  @media (hover:hover) and (pointer:fine){
+    .navarrow{display:flex; align-items:center; justify-content:center;
+      position:fixed; top:0; bottom:0; width:64px; z-index:50;
+      background:none; border:none; color:var(--faint); font-size:34px;
+      cursor:pointer; opacity:0; transition:opacity .18s ease, color .18s ease;
+      -webkit-tap-highlight-color:transparent;}
+    body:hover .navarrow{opacity:.5;}
+    .navarrow:hover{opacity:1; color:var(--muted);}
+    .navarrow.left{left:max(0px, calc(50% - 310px - 64px));}
+    .navarrow.right{right:max(0px, calc(50% - 310px - 64px));}
+    .navarrow[disabled]{opacity:0 !important; pointer-events:none;}
+  }
 
   dialog{background:var(--card); color:var(--ink); border:none; border-radius:20px;
     padding:22px; width:min(92vw, 380px); margin:auto;}
@@ -103,11 +135,14 @@
 </head>
 <body>
 <canvas id="confetti" aria-hidden="true"></canvas>
+<button class="navarrow left" id="navLeft" aria-label="previous">‹</button>
+<button class="navarrow right" id="navRight" aria-label="next">›</button>
 <header>
   <h1>do 100 things 💪</h1>
   <button id="settingsBtn" aria-label="settings">⋯</button>
 </header>
 <main id="list"></main>
+<div id="total"></div>
 
 <dialog id="addDlg">
   <h2>new counter</h2>
@@ -362,25 +397,39 @@ const list = document.getElementById("list");
 function render(){
   const active = state.counters.filter(c=>!c.archived);
   if(active.length === 0){
-    list.innerHTML = '<div class="empty">nothing here yet.<br>add a counter and tap it once.</div>';
+    list.classList.add("single");
+    list.innerHTML = '<div class="slide"><div class="empty">nothing here yet.<br>add a counter and tap it once.</div></div>';
   } else {
+    list.classList.toggle("single", active.length === 1);
     list.innerHTML = active.map(c => `
-      <div class="card" data-id="${c.id}">
-        <div class="top">
-          <span class="emoji">${c.emoji||""}</span>
-          <span class="name">${esc(c.name)}</span>
-          <button class="dots" data-dots="${c.id}" aria-label="options">···</button>
-        </div>
-        ${c.framing ? `<div class="framing">${esc(c.framing)}</div>` : ""}
-        <div class="num" style="color:var(${c.color||"--ink"})">${c.count}</div>
-        ${c.target ? `<div class="toward">toward ${c.target}</div>` : ""}
-        <div class="msg" data-msg="${c.id}">
-          <span class="msgtext"></span>
-          <button class="undo" data-undo="${c.id}">undo</button>
+      <div class="slide">
+        <div class="card" data-id="${c.id}">
+          <div class="top">
+            <span class="emoji">${c.emoji||""}</span>
+            <span class="name">${esc(c.name)}</span>
+            <button class="dots" data-dots="${c.id}" aria-label="options">···</button>
+          </div>
+          ${c.framing ? `<div class="framing">${esc(c.framing)}</div>` : ""}
+          <div class="mid">
+            <div class="num" style="color:var(${c.color||"--ink"})">${c.count}</div>
+            ${c.target ? `<div class="toward">toward ${c.target}</div>` : ""}
+          </div>
+          <div class="msg" data-msg="${c.id}">
+            <span class="msgtext"></span>
+            <button class="undo" data-undo="${c.id}">undo</button>
+          </div>
         </div>
       </div>`).join("");
   }
   renderArchived();
+  renderTotal();
+  if(typeof updateArrows === "function") updateArrows();
+}
+function renderTotal(){
+  const el = document.getElementById("total");
+  if(!el) return;
+  const n = state.counters.reduce((a,c)=>a + (c.count||0), 0);
+  el.textContent = n > 0 ? `you showed up ${n.toLocaleString()} ${n === 1 ? "time" : "times"}` : "";
 }
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
 
@@ -420,6 +469,7 @@ function increment(id, cardEl, ev){
   const numEl = cardEl.querySelector(".num");
   numEl.textContent = c.count;
   cardEl.classList.remove("ticked"); void cardEl.offsetWidth; cardEl.classList.add("ticked");
+  renderTotal();
 
   const m = pickMessage(c, prevLastTs);
   showMsg(cardEl, id, m.text, m.milestone, true, m.milestone ? 7000 : 6000);
@@ -437,6 +487,7 @@ function undoLast(id, cardEl){
   c.entries.pop();
   save();
   cardEl.querySelector(".num").textContent = c.count;
+  renderTotal();
   showMsg(cardEl, id, "fixed.", false, c.count > 0, 5000);
 }
 
@@ -503,6 +554,7 @@ document.getElementById("addSave").onclick = () => {
     emoji: pick.addEmoji, color: pick.addColor,
     target: isNaN(t) ? null : t, count: 0, entries: [], archived: false });
   save(); addDlg.close(); render();
+  scrollToIndex(activeCount() - 1);   // land on the new card
 };
 document.getElementById("editBtn").onclick = () => {
   const c = state.counters.find(x=>x.id===sheetId);
@@ -553,7 +605,40 @@ document.getElementById("exportBtn").onclick = () => {
   a.click(); URL.revokeObjectURL(a.href);
 };
 
+/* ---------- horizontal scroller nav ---------- */
+function activeCount(){ return state.counters.filter(c=>!c.archived).length; }
+function currentIndex(){
+  const w = list.clientWidth || 1;
+  return Math.round(list.scrollLeft / w);
+}
+function scrollToIndex(i){
+  const max = activeCount() - 1;
+  i = Math.max(0, Math.min(i, max));
+  list.scrollTo({ left: i * list.clientWidth, behavior: "smooth" });
+}
+const navLeft = document.getElementById("navLeft");
+const navRight = document.getElementById("navRight");
+function updateArrows(){
+  const i = currentIndex(), max = activeCount() - 1;
+  navLeft.disabled = i <= 0;
+  navRight.disabled = i >= max;
+}
+navLeft.onclick = () => scrollToIndex(currentIndex() - 1);
+navRight.onclick = () => scrollToIndex(currentIndex() + 1);
+let scrollRaf = null;
+list.addEventListener("scroll", () => {
+  if(scrollRaf) return;
+  scrollRaf = requestAnimationFrame(() => { updateArrows(); scrollRaf = null; });
+});
+window.addEventListener("resize", () => { scrollToIndex(currentIndex()); updateArrows(); });
+document.addEventListener("keydown", e => {
+  if(document.querySelector("dialog[open]")) return;   // don't hijack keys in a dialog
+  if(e.key === "ArrowLeft") scrollToIndex(currentIndex() - 1);
+  else if(e.key === "ArrowRight") scrollToIndex(currentIndex() + 1);
+});
+
 render();
+updateArrows();
 pullSync();
 </script>
 </body>
