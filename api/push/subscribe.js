@@ -1,6 +1,7 @@
-import { sql, readBody, SLOTS, FREQS } from '../_lib/push.js';
+import { sql, readBody, SLOTS, FREQS, cleanCounter } from '../_lib/push.js';
 
-// POST { subscription, settings: { freq, slot } } upserts by endpoint.
+// POST { subscription, settings: { freq, slot, counter } } upserts by endpoint.
+// counter is { id, name } or null for "anything".
 // DELETE { endpoint } removes it. No auth, same as the counters API.
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -12,18 +13,19 @@ export default async function handler(req, res) {
       const sub = body?.subscription;
       const freq = body?.settings?.freq;
       const slot = body?.settings?.slot;
+      const counter = cleanCounter(body?.settings?.counter);
 
       if (!sub || typeof sub.endpoint !== 'string' || !sub.keys) {
         return res.status(400).json({ error: 'expected { subscription, settings }' });
       }
-      if (!(freq in FREQS) || !SLOTS.includes(slot)) {
+      if (!(freq in FREQS) || !SLOTS.includes(slot) || counter === undefined) {
         return res.status(400).json({ error: 'bad settings' });
       }
 
       await sql`
         insert into push_subscriptions (endpoint, subscription, settings, updated_at)
         values (${sub.endpoint}, ${JSON.stringify(sub)}::jsonb,
-                ${JSON.stringify({ freq, slot })}::jsonb, now())
+                ${JSON.stringify({ freq, slot, counter })}::jsonb, now())
         on conflict (endpoint) do update
           set subscription = excluded.subscription,
               settings     = excluded.settings,

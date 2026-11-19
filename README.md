@@ -42,5 +42,5 @@ Counter, not a habit tracker. localStorage is the live copy, Neon is the durable
 - The tap never waits on the network. Writes go to localStorage first and push to Neon ~800ms later. Failures are silent by design.
 - No auth: anyone with the URL can read/write the row. Deliberate — it's a counter, and auth was scoped out.
 - Export button in settings downloads everything as JSON. Insurance, not a feature.
-- Notifications are opt-in and deliberately random: each cron rolls against the chosen frequency (now and then ≈ 30%, most days ≈ 80%) and picks from a fixed message bank. The send path never reads the `counters` table, so a notification never means "you didn't do it."
+- Notifications are opt-in and deliberately random: each cron rolls against the chosen frequency (now and then ≈ 30%, most days ≈ 80%, every day = always) and picks from a fixed message bank. You can point them at one activity: its name becomes the title and tapping opens its card. Only the name is sent to the server, never counts or dates; renaming follows automatically, archiving falls back to "anything". The send path never reads the `counters` table, so a notification never means "you didn't do it."
 - Cron times are UTC, set for IST: morning 9:30-10:30am, afternoon 2:30-3:30pm, evening 7:30-8:30pm. On the Hobby plan each fires at a random minute within its hour.
