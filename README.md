@@ -13,12 +13,12 @@ Counter, not a habit tracker. localStorage is the live copy, Neon is the durable
 
 ### Notifications (optional)
 
-1. Run `npx web-push generate-vapid-keys`.
+1. Keys are already generated and the public one is in `index.html`. To rotate them, run `npx web-push generate-vapid-keys` on your computer, update both Vercel vars and the constant in `index.html`, then turn notifications off and on again on the phone.
 2. In Vercel → Project → Settings → Environment Variables, add:
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
    - `VAPID_SUBJECT` = `mailto:you@example.com` (must be `mailto:` or `https:`)
    - `CRON_SECRET` = any long random string
-3. Paste the public key into `VAPID_PUBLIC_KEY` near the bottom of `index.html`. It's public, safe to commit. The private key lives only in Vercel.
+3. The `VAPID_PUBLIC_KEY` in Vercel must match the constant near the bottom of `index.html`. It's public, safe to commit. The private key lives only in Vercel.
 4. Run the `push_subscriptions` block from `schema.sql` in the Neon SQL editor (it's safe to re-run the whole file).
 5. Deploy. Vercel → Project → Settings → Cron Jobs should list three jobs.
 6. On iPhone, **open the app from the home screen icon** (not a Safari tab) → settings → notifications → on → Allow.

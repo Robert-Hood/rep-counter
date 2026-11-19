@@ -669,7 +669,7 @@ document.addEventListener("keydown", e => {
 /* ---------- notifications: opt-in, random, never tied to counts ----------
    The server decides with a random roll and a fixed message bank. Nothing here
    (or there) looks at counter data. Failures are silent, same as sync. */
-const VAPID_PUBLIC_KEY = ""; // paste the public key from `npx web-push generate-vapid-keys`
+const VAPID_PUBLIC_KEY = "BGfG1z5GI_JE585gVTbvaxSGA51FzKkvXZAfeVHT91saIlGU1jcgFW3dCnd9-mz3NCbzQlY_qFLkJAbQzrjIBoU"; // public, safe to commit. Private key lives only in Vercel.
 const NKEY = "countup.notif.v1";
 const PUSH_OK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const notifDlg = document.getElementById("notifDlg");
