@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'expected { endpoint }' });
     }
     const rows = await sql`
-      select endpoint, subscription from push_subscriptions where endpoint = ${body.endpoint}
+      select endpoint, subscription, settings from push_subscriptions where endpoint = ${body.endpoint}
     `;
     if (!rows.length) return res.status(404).json({ error: 'not subscribed' });
 

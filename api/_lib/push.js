@@ -13,9 +13,9 @@ export const vapidReady = Boolean(VAPID_SUBJECT && VAPID_PUBLIC_KEY && VAPID_PRI
 if (vapidReady) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 export const SLOTS = ['morning', 'afternoon', 'evening'];
-export const FREQS = { 'now and then': 0.3, 'most days': 0.8 };
+export const FREQS = { 'now and then': 0.3, 'most days': 0.8, 'every day': 1 };
 
-const TITLE = '100 things';
+const TITLE = 'Reps'; // matches the home screen icon name, which iOS shows as "from Reps"
 const MESSAGES = [
   "if you feel like a rep, cool. if not, also cool.",
   "no pressure. just here if you want it.",
@@ -29,8 +29,25 @@ const MESSAGES = [
   "nothing's due. this is just a door left open."
 ];
 
-export function randomMessage() {
-  return { title: TITLE, body: MESSAGES[Math.floor(Math.random() * MESSAGES.length)] };
+// The title is the chosen activity's name (e.g. "meditation") when there is one.
+// Only the name is used: never a count, a date or anything about past reps.
+export function randomMessage(settings) {
+  const counter = settings?.counter;
+  return {
+    title: counter?.name || TITLE,
+    body: MESSAGES[Math.floor(Math.random() * MESSAGES.length)],
+    counterId: counter?.id || null // lets a tap open that activity's card
+  };
+}
+
+// Validates the optional { id, name } activity a subscription is for.
+// Returns null for "anything", undefined if it's malformed.
+export function cleanCounter(c) {
+  if (c === null || c === undefined) return null;
+  if (typeof c !== 'object' || typeof c.id !== 'string' || typeof c.name !== 'string') return undefined;
+  const id = c.id.slice(0, 64);
+  const name = c.name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60);
+  return id && name ? { id, name } : undefined;
 }
 
 // Vercel usually parses JSON bodies for us, but not in every runtime config.
@@ -50,7 +67,7 @@ export async function readBody(req) {
 // Returns 'sent' | 'gone' | 'failed'.
 export async function send(row) {
   try {
-    await webpush.sendNotification(row.subscription, JSON.stringify(randomMessage()), {
+    await webpush.sendNotification(row.subscription, JSON.stringify(randomMessage(row.settings)), {
       TTL: 3 * 60 * 60 // a push delayed while the phone is off shouldn't land at an odd hour
     });
     return 'sent';

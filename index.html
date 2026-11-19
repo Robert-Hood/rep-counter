@@ -232,7 +232,10 @@
   <div class="row" data-group="freq">
     <button type="button" class="chip txt" data-v="now and then">now and then</button>
     <button type="button" class="chip txt" data-v="most days">most days</button>
+    <button type="button" class="chip txt" data-v="every day">every day</button>
   </div>
+  <label>for</label>
+  <div class="row" data-group="counter" id="notifCounters"></div>
   <label>when</label>
   <div class="row" data-group="slot">
     <button type="button" class="chip txt" data-v="morning">morning</button>
@@ -424,6 +427,7 @@ function pickMessage(counter, prevLastTs){
 /* ---------- render ---------- */
 const list = document.getElementById("list");
 function render(){
+  notifAfterRender();
   const active = state.counters.filter(c=>!c.archived);
   if(active.length === 0){
     list.classList.add("single");
@@ -679,7 +683,7 @@ const notifBtn = document.getElementById("notifBtn");
 
 let notif = loadNotif();
 function loadNotif(){
-  const d = { enabled:false, freq:"now and then", slot:"evening" };
+  const d = { enabled:false, freq:"now and then", slot:"evening", counter:null };
   try{ const n = JSON.parse(localStorage.getItem(NKEY)); if(n) return { ...d, ...n }; }catch(e){}
   return d;
 }
@@ -711,7 +715,7 @@ function postSub(sub){
     try{
       sub = sub || await currentSub();
       if(sub) await pushApi("POST", "/api/push/subscribe",
-        { subscription: sub.toJSON(), settings:{ freq: notif.freq, slot: notif.slot } });
+        { subscription: sub.toJSON(), settings:{ freq: notif.freq, slot: notif.slot, counter: notif.counter } });
     }catch(e){ /* silent */ }
   });
   return subPost;
@@ -762,7 +766,12 @@ function renderNotif(){
   notifNote.hidden = !note;
 
   const on = usable && notif.enabled;
-  const val = { enabled: on ? "on" : "off", freq: notif.freq, slot: notif.slot };
+  const active = state.counters.filter(c=>!c.archived);
+  document.getElementById("notifCounters").innerHTML =
+    `<button type="button" class="chip txt" data-v="">anything</button>` +
+    active.map(c=>`<button type="button" class="chip txt" data-v="${esc(c.id)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join("");
+  const val = { enabled: on ? "on" : "off", freq: notif.freq, slot: notif.slot,
+                counter: notif.counter ? notif.counter.id : "" };
   notifDlg.querySelectorAll("[data-group]").forEach(g => {
     g.querySelectorAll("[data-v]").forEach(b => {
       b.classList.toggle("sel", b.dataset.v === val[g.dataset.group]);
@@ -777,8 +786,15 @@ notifDlg.addEventListener("click", e => {
   if(!b || b.disabled) return;
   const group = b.parentElement.dataset.group, v = b.dataset.v;
   if(group === "enabled"){ v === "on" ? notifOn() : notifOff(); return; }
-  if(notif[group] === v) return;
-  notif[group] = v; saveNotif(); renderNotif();
+  if(group === "counter"){
+    if((notif.counter ? notif.counter.id : "") === v) return;
+    const c = state.counters.find(x=>x.id===v);
+    notif.counter = c ? { id:c.id, name:c.name } : null;
+  } else {
+    if(notif[group] === v) return;
+    notif[group] = v;
+  }
+  saveNotif(); renderNotif();
   if(notif.enabled) postSub();
 });
 notifTestBtn.onclick = notifTest;
@@ -797,10 +813,40 @@ async function resyncPush(){
   catch(e){ notif.enabled = false; saveNotif(); }
 }
 
+// Keeps the chosen activity's name current on the server. If it's renamed the
+// title follows; if it's archived, notifications go back to "anything".
+// Runs from render(), which follows every edit, archive, unarchive and pull.
+function notifAfterRender(){
+  try{
+    if(!notif.counter) return;
+    const c = state.counters.find(x=>x.id===notif.counter.id && !x.archived);
+    if(c && c.name === notif.counter.name) return;
+    notif.counter = c ? { id:c.id, name:c.name } : null;
+    saveNotif();
+    if(notif.enabled) postSub();
+  }catch(e){ /* before the notification code has loaded */ }
+}
+
+// A tapped notification opens its activity's card.
+function openCounter(id){
+  const i = state.counters.filter(c=>!c.archived).findIndex(c=>c.id===id);
+  if(i < 0) return;
+  document.querySelectorAll("dialog[open]").forEach(d=>d.close());
+  scrollToIndex(i);
+}
+if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", e => {
+  if(e.data && e.data.type === "open-counter") openCounter(e.data.id);
+});
+
 render();
 updateArrows();
 pullSync();
 resyncPush();
+const startCounter = new URLSearchParams(location.search).get("c");
+if(startCounter){
+  history.replaceState(null, "", "/");
+  requestAnimationFrame(() => openCounter(startCounter));
+}
 </script>
 </body>
 </html>
