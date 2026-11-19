@@ -4,3 +4,11 @@ create table if not exists counters (
   data       jsonb       not null,
   updated_at timestamptz not null default now()
 );
+
+-- push notifications: one row per subscribed device
+create table if not exists push_subscriptions (
+  endpoint     text primary key,
+  subscription jsonb       not null,
+  settings     jsonb       not null,
+  updated_at   timestamptz not null default now()
+);

@@ -116,6 +116,9 @@
   .chip{background:var(--bg); border:1px solid var(--hairline); border-radius:10px;
     padding:8px 10px; font-size:18px; cursor:pointer;}
   .chip.sel{border-color:var(--muted);}
+  .chip.txt{font-size:14px; color:var(--ink); padding:8px 12px;}
+  .chip:disabled{opacity:.35; cursor:default;}
+  .note{font-size:13px; color:var(--muted); line-height:1.4; margin:0 0 4px;}
   .swatch{width:34px; height:34px; border-radius:10px; border:2px solid transparent; cursor:pointer;}
   .swatch.sel{border-color:var(--ink);}
   .actions{display:flex; gap:10px; margin-top:22px;}
@@ -207,12 +210,38 @@
   <h2>settings</h2>
   <div class="sheet-list">
     <button id="newCounterBtn">new counter</button>
+    <button id="notifBtn" hidden>notifications</button>
     <button id="exportBtn" class="quiet">export data</button>
     <button class="quiet" onclick="settingsDlg.close()">close</button>
   </div>
   <div id="archivedWrap" style="margin-top:18px; display:none;">
     <label style="font-size:13px; color:var(--muted);">archived (reps still counted, still yours)</label>
     <div id="archivedList"></div>
+  </div>
+</dialog>
+
+<dialog id="notifDlg">
+  <h2>notifications</h2>
+  <p id="notifNote" class="note" hidden></p>
+  <label>notifications</label>
+  <div class="row" data-group="enabled">
+    <button type="button" class="chip txt" data-v="off">off</button>
+    <button type="button" class="chip txt" data-v="on">on</button>
+  </div>
+  <label>how often</label>
+  <div class="row" data-group="freq">
+    <button type="button" class="chip txt" data-v="now and then">now and then</button>
+    <button type="button" class="chip txt" data-v="most days">most days</button>
+  </div>
+  <label>when</label>
+  <div class="row" data-group="slot">
+    <button type="button" class="chip txt" data-v="morning">morning</button>
+    <button type="button" class="chip txt" data-v="afternoon">afternoon</button>
+    <button type="button" class="chip txt" data-v="evening">evening</button>
+  </div>
+  <div class="sheet-list" style="margin-top:18px;">
+    <button id="notifTestBtn" class="quiet" hidden>send a test</button>
+    <button class="quiet" onclick="notifDlg.close()">close</button>
   </div>
 </dialog>
 
@@ -637,9 +666,141 @@ document.addEventListener("keydown", e => {
   else if(e.key === "ArrowRight") scrollToIndex(currentIndex() + 1);
 });
 
+/* ---------- notifications: opt-in, random, never tied to counts ----------
+   The server decides with a random roll and a fixed message bank. Nothing here
+   (or there) looks at counter data. Failures are silent, same as sync. */
+const VAPID_PUBLIC_KEY = ""; // paste the public key from `npx web-push generate-vapid-keys`
+const NKEY = "countup.notif.v1";
+const PUSH_OK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const notifDlg = document.getElementById("notifDlg");
+const notifNote = document.getElementById("notifNote");
+const notifTestBtn = document.getElementById("notifTestBtn");
+const notifBtn = document.getElementById("notifBtn");
+
+let notif = loadNotif();
+function loadNotif(){
+  const d = { enabled:false, freq:"now and then", slot:"evening" };
+  try{ const n = JSON.parse(localStorage.getItem(NKEY)); if(n) return { ...d, ...n }; }catch(e){}
+  return d;
+}
+function saveNotif(){ try{ localStorage.setItem(NKEY, JSON.stringify(notif)); }catch(e){} }
+function isStandalone(){
+  return navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+}
+function b64urlToBytes(s){
+  const b64 = (s + "=".repeat((4 - s.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+function pushApi(method, path, body){
+  return fetch(path, { method, headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+}
+async function currentSub(){
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+async function ensureSub(){
+  const reg = await navigator.serviceWorker.ready;
+  return (await reg.pushManager.getSubscription()) ||
+    reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC_KEY) });
+}
+// Chained so a quick run of setting changes reaches the server in order,
+// and "send a test" waits for the subscription to land first.
+let subPost = Promise.resolve();
+function postSub(sub){
+  subPost = subPost.then(async () => {
+    try{
+      sub = sub || await currentSub();
+      if(sub) await pushApi("POST", "/api/push/subscribe",
+        { subscription: sub.toJSON(), settings:{ freq: notif.freq, slot: notif.slot } });
+    }catch(e){ /* silent */ }
+  });
+  return subPost;
+}
+
+function notifOn(){
+  if(notif.enabled) return;
+  // iOS only shows the prompt if this runs straight from the tap, before any network wait.
+  Notification.requestPermission().then(async perm => {
+    if(perm !== "granted"){ renderNotif(); return; }
+    try{
+      const sub = await ensureSub();
+      notif.enabled = true; saveNotif(); renderNotif();
+      postSub(sub);
+    }catch(e){ renderNotif(); }
+  });
+}
+async function notifOff(){
+  if(!notif.enabled) return;
+  notif.enabled = false; saveNotif(); renderNotif();
+  try{
+    const sub = await currentSub();
+    if(sub){
+      const endpoint = sub.endpoint;
+      await sub.unsubscribe().catch(()=>{});
+      await pushApi("DELETE", "/api/push/subscribe", { endpoint });
+    }
+  }catch(e){ /* silent: if the row lingers, the next send gets a 410 and removes it */ }
+}
+async function notifTest(){
+  try{
+    await subPost;
+    const sub = await currentSub();
+    if(sub) await pushApi("POST", "/api/push/test", { endpoint: sub.endpoint });
+  }catch(e){ /* silent */ }
+}
+
+function renderNotif(){
+  const standalone = isStandalone();
+  const denied = PUSH_OK && Notification.permission === "denied";
+  const usable = standalone && PUSH_OK && !denied;
+  if(denied && notif.enabled){ notif.enabled = false; saveNotif(); }
+
+  const note = !standalone ? "open from your home screen icon to turn these on."
+             : denied      ? "notifications are off in iphone settings > 100 things."
+             : "";
+  notifNote.textContent = note;
+  notifNote.hidden = !note;
+
+  const on = usable && notif.enabled;
+  const val = { enabled: on ? "on" : "off", freq: notif.freq, slot: notif.slot };
+  notifDlg.querySelectorAll("[data-group]").forEach(g => {
+    g.querySelectorAll("[data-v]").forEach(b => {
+      b.classList.toggle("sel", b.dataset.v === val[g.dataset.group]);
+      b.disabled = !usable;
+    });
+  });
+  notifTestBtn.hidden = !on;
+}
+
+notifDlg.addEventListener("click", e => {
+  const b = e.target.closest("[data-v]");
+  if(!b || b.disabled) return;
+  const group = b.parentElement.dataset.group, v = b.dataset.v;
+  if(group === "enabled"){ v === "on" ? notifOn() : notifOff(); return; }
+  if(notif[group] === v) return;
+  notif[group] = v; saveNotif(); renderNotif();
+  if(notif.enabled) postSub();
+});
+notifTestBtn.onclick = notifTest;
+notifBtn.onclick = () => { settingsDlg.close(); renderNotif(); notifDlg.showModal(); };
+
+// In a Safari tab iOS hides PushManager, so keep the row there to show the
+// "open from your home screen icon" hint. Hide it only where push can't work at all.
+notifBtn.hidden = isStandalone() && !PUSH_OK;
+if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+// The subscription endpoint can change, so re-send it on every launch.
+async function resyncPush(){
+  if(!PUSH_OK || !notif.enabled) return;
+  if(Notification.permission !== "granted"){ notif.enabled = false; saveNotif(); return; }
+  try{ postSub(await ensureSub()); }
+  catch(e){ notif.enabled = false; saveNotif(); }
+}
+
 render();
 updateArrows();
 pullSync();
+resyncPush();
 </script>
 </body>
 </html>
